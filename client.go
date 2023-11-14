@@ -35,6 +35,26 @@ func HTTPClientWithBasicAuth(c HTTPClient, username, password string) HTTPClient
 	return &basicAuthHTTPClient{c, username, password}
 }
 
+type bearerAuthHTTPClient struct {
+	c     HTTPClient
+	token string
+}
+
+func (c *bearerAuthHTTPClient) Do(req *http.Request) (*http.Response, error) {
+	req.Header.Add("Authorization", "Bearer "+c.token)
+	return c.c.Do(req)
+}
+
+// HTTPClientWithBearerAuth returns an HTTP client that adds bearer token
+// authentication to all outgoing requests. If c is nil, http.DefaultClient is
+// used.
+func HTTPClientWithBearerAuth(c HTTPClient, token string) HTTPClient {
+	if c == nil {
+		c = http.DefaultClient
+	}
+	return &bearerAuthHTTPClient{c, token}
+}
+
 // Client provides access to a remote WebDAV filesystem.
 type Client struct {
 	ic *internal.Client
