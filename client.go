@@ -69,6 +69,10 @@ func NewClient(c HTTPClient, endpoint string) (*Client, error) {
 	return &Client{ic}, nil
 }
 
+func (c *Client) SetInterceptor(interceptor func(*http.Request)) {
+	c.ic.SetInterceptor(interceptor)
+}
+
 func (c *Client) FindCurrentUserPrincipal() (string, error) {
 	propfind := internal.NewPropNamePropFind(internal.CurrentUserPrincipalName)
 

@@ -21,8 +21,9 @@ type HTTPClient interface {
 }
 
 type Client struct {
-	http     HTTPClient
-	endpoint *url.URL
+	http        HTTPClient
+	endpoint    *url.URL
+	interceptor func(*http.Request)
 }
 
 func NewClient(c HTTPClient, endpoint string) (*Client, error) {
@@ -57,6 +58,10 @@ func (c *Client) NewRequest(method string, path string, body io.Reader) (*http.R
 	return http.NewRequest(method, c.ResolveHref(path).String(), body)
 }
 
+func (c *Client) SetInterceptor(interceptor func(*http.Request)) {
+	c.interceptor = interceptor
+}
+
 func (c *Client) NewXMLRequest(method string, path string, v interface{}) (*http.Request, error) {
 	var buf bytes.Buffer
 	buf.WriteString(xml.Header)
@@ -75,6 +80,10 @@ func (c *Client) NewXMLRequest(method string, path string, v interface{}) (*http
 }
 
 func (c *Client) Do(req *http.Request) (*http.Response, error) {
+	if c.interceptor != nil {
+		c.interceptor(req)
+	}
+
 	resp, err := c.http.Do(req)
 	if err != nil {
 		return nil, err
