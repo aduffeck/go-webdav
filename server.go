@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/emersion/go-webdav/errors"
 	"github.com/emersion/go-webdav/internal"
 )
 
@@ -48,7 +49,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // denied, etc) while also providing an (optional) arbitrary error context
 // (intended for humans).
 func NewHTTPError(statusCode int, cause error) error {
-	return &internal.HTTPError{Code: statusCode, Err: cause}
+	return &errors.HTTPError{Code: statusCode, Err: cause}
 }
 
 type backend struct {
@@ -81,12 +82,12 @@ func (b *backend) Options(r *http.Request) (caps []string, allow []string, err e
 func (b *backend) HeadGet(w http.ResponseWriter, r *http.Request) error {
 	fi, err := b.FileSystem.Stat(r.URL.Path)
 	if os.IsNotExist(err) {
-		return &internal.HTTPError{Code: http.StatusNotFound, Err: err}
+		return &errors.HTTPError{Code: http.StatusNotFound, Err: err}
 	} else if err != nil {
 		return err
 	}
 	if fi.IsDir {
-		return &internal.HTTPError{Code: http.StatusMethodNotAllowed}
+		return &errors.HTTPError{Code: http.StatusMethodNotAllowed}
 	}
 
 	f, err := b.FileSystem.Open(r.URL.Path)
@@ -122,7 +123,7 @@ func (b *backend) PropFind(r *http.Request, propfind *internal.PropFind, depth i
 
 	fi, err := b.FileSystem.Stat(r.URL.Path)
 	if os.IsNotExist(err) {
-		return nil, &internal.HTTPError{Code: http.StatusNotFound, Err: err}
+		return nil, &errors.HTTPError{Code: http.StatusNotFound, Err: err}
 	} else if err != nil {
 		return nil, err
 	}
@@ -194,7 +195,7 @@ func (b *backend) propFindFile(propfind *internal.PropFind, fi *FileInfo) (*inte
 
 func (b *backend) PropPatch(r *http.Request, update *internal.PropertyUpdate) (*internal.Response, error) {
 	// TODO: return a failed Response instead
-	return nil, internal.HTTPErrorf(http.StatusForbidden, "webdav: PROPPATCH is unsupported")
+	return nil, errors.HTTPErrorf(http.StatusForbidden, "webdav: PROPPATCH is unsupported")
 }
 
 func (b *backend) Put(r *http.Request) (*internal.Href, error) {
@@ -214,18 +215,18 @@ func (b *backend) Put(r *http.Request) (*internal.Href, error) {
 func (b *backend) Delete(r *http.Request) error {
 	err := b.FileSystem.RemoveAll(r.URL.Path)
 	if os.IsNotExist(err) {
-		return &internal.HTTPError{Code: http.StatusNotFound, Err: err}
+		return &errors.HTTPError{Code: http.StatusNotFound, Err: err}
 	}
 	return err
 }
 
 func (b *backend) Mkcol(r *http.Request) error {
 	if r.Header.Get("Content-Type") != "" {
-		return internal.HTTPErrorf(http.StatusUnsupportedMediaType, "webdav: request body not supported in MKCOL request")
+		return errors.HTTPErrorf(http.StatusUnsupportedMediaType, "webdav: request body not supported in MKCOL request")
 	}
 	err := b.FileSystem.Mkdir(r.URL.Path)
 	if os.IsNotExist(err) {
-		return &internal.HTTPError{Code: http.StatusConflict, Err: err}
+		return &errors.HTTPError{Code: http.StatusConflict, Err: err}
 	}
 	return err
 }
@@ -233,7 +234,7 @@ func (b *backend) Mkcol(r *http.Request) error {
 func (b *backend) Copy(r *http.Request, dest *internal.Href, recursive, overwrite bool) (created bool, err error) {
 	created, err = b.FileSystem.Copy(r.URL.Path, dest.Path, recursive, overwrite)
 	if os.IsExist(err) {
-		return false, &internal.HTTPError{http.StatusPreconditionFailed, err}
+		return false, &errors.HTTPError{http.StatusPreconditionFailed, err}
 	}
 	return created, err
 }
@@ -241,7 +242,7 @@ func (b *backend) Copy(r *http.Request, dest *internal.Href, recursive, overwrit
 func (b *backend) Move(r *http.Request, dest *internal.Href, overwrite bool) (created bool, err error) {
 	created, err = b.FileSystem.MoveAll(r.URL.Path, dest.Path, overwrite)
 	if os.IsExist(err) {
-		return false, &internal.HTTPError{http.StatusPreconditionFailed, err}
+		return false, &errors.HTTPError{http.StatusPreconditionFailed, err}
 	}
 	return created, err
 }

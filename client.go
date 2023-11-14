@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/emersion/go-webdav/errors"
 	"github.com/emersion/go-webdav/internal"
 )
 
@@ -119,12 +120,12 @@ func fileInfoFromResponse(resp *internal.Response) (*fileInfo, error) {
 		}
 
 		var getType internal.GetContentType
-		if err := resp.DecodeProp(&getType); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getType); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var getETag internal.GetETag
-		if err := resp.DecodeProp(&getETag); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getETag); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
@@ -134,7 +135,7 @@ func fileInfoFromResponse(resp *internal.Response) (*fileInfo, error) {
 	}
 
 	var getMod internal.GetLastModified
-	if err := resp.DecodeProp(&getMod); err != nil && !internal.IsNotFound(err) {
+	if err := resp.DecodeProp(&getMod); err != nil && !errors.IsNotFound(err) {
 		return nil, err
 	}
 	fi.ModTime = time.Time(getMod.LastModified)

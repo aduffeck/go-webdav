@@ -11,6 +11,8 @@ import (
 	"path"
 	"strings"
 	"unicode"
+
+	"github.com/emersion/go-webdav/errors"
 )
 
 // HTTPClient performs HTTP requests. It's implemented by *http.Client.
@@ -106,7 +108,7 @@ func (c *Client) Do(req *http.Request) (*http.Response, error) {
 				wrappedErr = fmt.Errorf("%v", s)
 			}
 		}
-		return nil, &HTTPError{Code: resp.StatusCode, Err: wrappedErr}
+		return nil, &errors.HTTPError{Code: resp.StatusCode, Err: wrappedErr}
 	}
 	return resp, nil
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/emersion/go-vcard"
 	"github.com/emersion/go-webdav"
+	"github.com/emersion/go-webdav/errors"
 	"github.com/emersion/go-webdav/internal"
 )
 
@@ -94,7 +95,7 @@ func (h *Handler) handleReport(w http.ResponseWriter, r *http.Request) error {
 	} else if report.Multiget != nil {
 		return h.handleMultiget(r.Context(), w, report.Multiget)
 	}
-	return internal.HTTPErrorf(http.StatusBadRequest, "carddav: expected addressbook-query or addressbook-multiget element in REPORT request")
+	return errors.HTTPErrorf(http.StatusBadRequest, "carddav: expected addressbook-query or addressbook-multiget element in REPORT request")
 }
 
 func decodePropFilter(el *propFilter) (*PropFilter, error) {
@@ -142,7 +143,7 @@ func decodeTextMatch(tm *textMatch) *TextMatch {
 
 func decodeAddressDataReq(addressData *addressDataReq) (*AddressDataRequest, error) {
 	if addressData.Allprop != nil && len(addressData.Props) > 0 {
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "carddav: only one of allprop or prop can be specified in address-data")
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "carddav: only one of allprop or prop can be specified in address-data")
 	}
 
 	req := &AddressDataRequest{AllProp: addressData.Allprop != nil}
@@ -156,7 +157,7 @@ func (h *Handler) handleQuery(ctx context.Context, w http.ResponseWriter, query 
 	var q AddressBookQuery
 	if query.Prop != nil {
 		var addressData addressDataReq
-		if err := query.Prop.Decode(&addressData); err != nil && !internal.IsNotFound(err) {
+		if err := query.Prop.Decode(&addressData); err != nil && !errors.IsNotFound(err) {
 			return err
 		}
 		req, err := decodeAddressDataReq(&addressData)
@@ -169,7 +170,7 @@ func (h *Handler) handleQuery(ctx context.Context, w http.ResponseWriter, query 
 	for _, el := range query.Filter.Props {
 		pf, err := decodePropFilter(&el)
 		if err != nil {
-			return &internal.HTTPError{http.StatusBadRequest, err}
+			return &errors.HTTPError{http.StatusBadRequest, err}
 		}
 		q.PropFilters = append(q.PropFilters, *pf)
 	}
@@ -211,7 +212,7 @@ func (h *Handler) handleMultiget(ctx context.Context, w http.ResponseWriter, mul
 	var dataReq AddressDataRequest
 	if multiget.Prop != nil {
 		var addressData addressDataReq
-		if err := multiget.Prop.Decode(&addressData); err != nil && !internal.IsNotFound(err) {
+		if err := multiget.Prop.Decode(&addressData); err != nil && !errors.IsNotFound(err) {
 			return err
 		}
 		decoded, err := decodeAddressDataReq(&addressData)
@@ -288,7 +289,7 @@ func (b *backend) Options(r *http.Request) (caps []string, allow []string, err e
 
 	var dataReq AddressDataRequest
 	_, err = b.Backend.GetAddressObject(r.Context(), r.URL.Path, &dataReq)
-	if httpErr, ok := err.(*internal.HTTPError); ok && httpErr.Code == http.StatusNotFound {
+	if httpErr, ok := err.(*errors.HTTPError); ok && httpErr.Code == http.StatusNotFound {
 		return caps, []string{http.MethodOptions, http.MethodPut}, nil
 	} else if err != nil {
 		return nil, nil, err
@@ -664,18 +665,18 @@ func (b *backend) Put(r *http.Request) (*internal.Href, error) {
 
 	t, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil {
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "carddav: malformed Content-Type: %v", err)
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "carddav: malformed Content-Type: %v", err)
 	}
 	if t != vcard.MIMEType {
 		// TODO: send CARDDAV:supported-address-data error
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "carddav: unsupporetd Content-Type %q", t)
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "carddav: unsupporetd Content-Type %q", t)
 	}
 
 	// TODO: check CARDDAV:max-resource-size precondition
 	card, err := vcard.NewDecoder(r.Body).Decode()
 	if err != nil {
 		// TODO: send CARDDAV:valid-address-data error
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "carddav: failed to parse vCard: %v", err)
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "carddav: failed to parse vCard: %v", err)
 	}
 
 	// TODO: add support for the CARDDAV:no-uid-conflict error
@@ -692,7 +693,7 @@ func (b *backend) Delete(r *http.Request) error {
 }
 
 func (b *backend) Mkcol(r *http.Request) error {
-	return internal.HTTPErrorf(http.StatusForbidden, "carddav: address book creation unsupported")
+	return errors.HTTPErrorf(http.StatusForbidden, "carddav: address book creation unsupported")
 }
 
 func (b *backend) Copy(r *http.Request, dest *internal.Href, recursive, overwrite bool) (created bool, err error) {
@@ -716,7 +717,7 @@ const (
 func NewPreconditionError(err PreconditionType) error {
 	name := xml.Name{"urn:ietf:params:xml:ns:carddav", string(err)}
 	elem := internal.NewRawXMLElement(name, nil, nil)
-	return &internal.HTTPError{
+	return &errors.HTTPError{
 		Code: 409,
 		Err: &internal.Error{
 			Raw: []internal.RawXMLValue{*elem},

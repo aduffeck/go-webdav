@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	webdaverrors "github.com/emersion/go-webdav/errors"
 )
 
 const Namespace = "DAV:"
@@ -63,7 +65,7 @@ func (s *Status) Err() error {
 
 	// TODO: handle 2xx, 3xx
 	if s.Code != http.StatusOK {
-		return &HTTPError{Code: s.Code}
+		return &webdaverrors.HTTPError{Code: s.Code}
 	}
 	return nil
 }
@@ -121,7 +123,7 @@ func NewOKResponse(path string) *Response {
 
 func NewErrorResponse(path string, err error) *Response {
 	code := http.StatusInternalServerError
-	var httpErr *HTTPError
+	var httpErr *webdaverrors.HTTPError
 	if errors.As(err, &httpErr) {
 		code = httpErr.Code
 	}
@@ -152,7 +154,7 @@ func (resp *Response) Err() error {
 		}
 	}
 
-	return &HTTPError{
+	return &webdaverrors.HTTPError{
 		Code: resp.Status.Code,
 		Err:  err,
 	}
@@ -192,7 +194,7 @@ func (resp *Response) DecodeProp(values ...interface{}) error {
 			}
 			return nil
 		}
-		return newPropError(name, &HTTPError{
+		return newPropError(name, &webdaverrors.HTTPError{
 			Code: http.StatusNotFound,
 			Err:  fmt.Errorf("missing property"),
 		})
@@ -277,7 +279,7 @@ func (p *Prop) Decode(v interface{}) error {
 
 	raw := p.Get(name)
 	if raw == nil {
-		return HTTPErrorf(http.StatusNotFound, "missing property %s", name)
+		return webdaverrors.HTTPErrorf(http.StatusNotFound, "missing property %s", name)
 	}
 
 	return raw.Decode(v)

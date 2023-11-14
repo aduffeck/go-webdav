@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/emersion/go-webdav/errors"
 )
 
 // https://tools.ietf.org/html/rfc4918#section-9.6.2
@@ -34,7 +36,7 @@ func TestResponse_Err_error(t *testing.T) {
 	err := resp.Err()
 	if err == nil {
 		t.Errorf("Multistatus.Get() returned a nil error, expected non-nil")
-	} else if httpErr, ok := err.(*HTTPError); !ok {
+	} else if httpErr, ok := err.(*errors.HTTPError); !ok {
 		t.Errorf("Multistatus.Get() = %T, expected an *HTTPError", err)
 	} else if httpErr.Code != 423 {
 		t.Errorf("HTTPError.Code = %v, expected 423", httpErr.Code)

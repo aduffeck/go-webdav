@@ -12,6 +12,7 @@ import (
 
 	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
+	"github.com/emersion/go-webdav/errors"
 	"github.com/emersion/go-webdav/internal"
 )
 
@@ -78,17 +79,17 @@ func (c *Client) FindCalendars(calendarHomeSet string) ([]Calendar, error) {
 		}
 
 		var desc calendarDescription
-		if err := resp.DecodeProp(&desc); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&desc); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var dispName internal.DisplayName
-		if err := resp.DecodeProp(&dispName); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&dispName); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var maxResSize maxResourceSize
-		if err := resp.DecodeProp(&maxResSize); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&maxResSize); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 		if maxResSize.Size < 0 {
@@ -96,7 +97,7 @@ func (c *Client) FindCalendars(calendarHomeSet string) ([]Calendar, error) {
 		}
 
 		var supportedCompSet supportedCalendarComponentSet
-		if err := resp.DecodeProp(&supportedCompSet); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&supportedCompSet); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
@@ -182,17 +183,17 @@ func decodeCalendarObjectList(ms *internal.MultiStatus) ([]CalendarObject, error
 		}
 
 		var getLastMod internal.GetLastModified
-		if err := resp.DecodeProp(&getLastMod); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getLastMod); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var getETag internal.GetETag
-		if err := resp.DecodeProp(&getETag); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getETag); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var getContentLength internal.GetContentLength
-		if err := resp.DecodeProp(&getContentLength); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getContentLength); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 

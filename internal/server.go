@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+
+	webdaverrors "github.com/emersion/go-webdav/errors"
 )
 
 func ServeError(w http.ResponseWriter, err error) {
 	code := http.StatusInternalServerError
-	var httpErr *HTTPError
+	var httpErr *webdaverrors.HTTPError
 	if errors.As(err, &httpErr) {
 		code = httpErr.Code
 	}
@@ -30,11 +32,11 @@ func ServeError(w http.ResponseWriter, err error) {
 func DecodeXMLRequest(r *http.Request, v interface{}) error {
 	t, _, _ := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if t != "application/xml" && t != "text/xml" {
-		return HTTPErrorf(http.StatusBadRequest, "webdav: expected application/xml request")
+		return webdaverrors.HTTPErrorf(http.StatusBadRequest, "webdav: expected application/xml request")
 	}
 
 	if err := xml.NewDecoder(r.Body).Decode(v); err != nil {
-		return &HTTPError{http.StatusBadRequest, err}
+		return &webdaverrors.HTTPError{http.StatusBadRequest, err}
 	}
 	return nil
 }
@@ -107,7 +109,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "COPY", "MOVE":
 			err = h.handleCopyMove(w, r)
 		default:
-			err = HTTPErrorf(http.StatusMethodNotAllowed, "webdav: unsupported method")
+			err = webdaverrors.HTTPErrorf(http.StatusMethodNotAllowed, "webdav: unsupported method")
 		}
 	}
 
@@ -140,7 +142,7 @@ func (h *Handler) handlePropfind(w http.ResponseWriter, r *http.Request) error {
 		var err error
 		depth, err = ParseDepth(s)
 		if err != nil {
-			return &HTTPError{http.StatusBadRequest, err}
+			return &webdaverrors.HTTPError{http.StatusBadRequest, err}
 		}
 	}
 
@@ -180,7 +182,7 @@ func NewPropFindResponse(path string, propfind *PropFind, props map[xml.Name]Pro
 			code := http.StatusOK
 			if err != nil {
 				// TODO: don't throw away error message here
-				code = HTTPErrorFromError(err).Code
+				code = webdaverrors.HTTPErrorFromError(err).Code
 				val = emptyVal
 			}
 
@@ -203,7 +205,7 @@ func NewPropFindResponse(path string, propfind *PropFind, props map[xml.Name]Pro
 			if ok {
 				if v, err := f(&raw); err != nil {
 					// TODO: don't throw away error message here
-					code = HTTPErrorFromError(err).Code
+					code = webdaverrors.HTTPErrorFromError(err).Code
 				} else {
 					code = http.StatusOK
 					val = v
@@ -217,7 +219,7 @@ func NewPropFindResponse(path string, propfind *PropFind, props map[xml.Name]Pro
 			}
 		}
 	} else {
-		return nil, HTTPErrorf(http.StatusBadRequest, "webdav: request missing propname, allprop or prop element")
+		return nil, webdaverrors.HTTPErrorf(http.StatusBadRequest, "webdav: request missing propname, allprop or prop element")
 	}
 
 	return resp, nil
@@ -241,11 +243,11 @@ func (h *Handler) handleProppatch(w http.ResponseWriter, r *http.Request) error 
 func parseDestination(h http.Header) (*Href, error) {
 	destHref := h.Get("Destination")
 	if destHref == "" {
-		return nil, HTTPErrorf(http.StatusBadRequest, "webdav: missing Destination header in MOVE request")
+		return nil, webdaverrors.HTTPErrorf(http.StatusBadRequest, "webdav: missing Destination header in MOVE request")
 	}
 	dest, err := url.Parse(destHref)
 	if err != nil {
-		return nil, HTTPErrorf(http.StatusBadRequest, "webdav: marlformed Destination header in MOVE request: %v", err)
+		return nil, webdaverrors.HTTPErrorf(http.StatusBadRequest, "webdav: marlformed Destination header in MOVE request: %v", err)
 	}
 	return (*Href)(dest), nil
 }
@@ -279,7 +281,7 @@ func (h *Handler) handleCopyMove(w http.ResponseWriter, r *http.Request) error {
 		case DepthZero:
 			recursive = false
 		case DepthOne:
-			return HTTPErrorf(http.StatusBadRequest, `webdav: "Depth: 1" is not supported in COPY request`)
+			return webdaverrors.HTTPErrorf(http.StatusBadRequest, `webdav: "Depth: 1" is not supported in COPY request`)
 		case DepthInfinity:
 			recursive = true
 		}
@@ -287,7 +289,7 @@ func (h *Handler) handleCopyMove(w http.ResponseWriter, r *http.Request) error {
 		created, err = h.Backend.Copy(r, dest, recursive, overwrite)
 	} else {
 		if depth != DepthInfinity {
-			return HTTPErrorf(http.StatusBadRequest, `webdav: only "Depth: infinity" is accepted in MOVE request`)
+			return webdaverrors.HTTPErrorf(http.StatusBadRequest, `webdav: only "Depth: infinity" is accepted in MOVE request`)
 		}
 		created, err = h.Backend.Move(r, dest, overwrite)
 	}

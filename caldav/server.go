@@ -14,6 +14,7 @@ import (
 
 	"github.com/emersion/go-ical"
 	"github.com/emersion/go-webdav"
+	"github.com/emersion/go-webdav/errors"
 	"github.com/emersion/go-webdav/internal"
 )
 
@@ -95,7 +96,7 @@ func (h *Handler) handleReport(w http.ResponseWriter, r *http.Request) error {
 	} else if report.Multiget != nil {
 		return h.handleMultiget(r.Context(), w, report.Multiget)
 	}
-	return internal.HTTPErrorf(http.StatusBadRequest, "caldav: expected calendar-query or calendar-multiget element in REPORT request")
+	return errors.HTTPErrorf(http.StatusBadRequest, "caldav: expected calendar-query or calendar-multiget element in REPORT request")
 }
 
 func decodeParamFilter(el *paramFilter) (*ParamFilter, error) {
@@ -168,13 +169,13 @@ func decodeCompFilter(el *compFilter) (*CompFilter, error) {
 
 func decodeComp(comp *comp) (*CalendarCompRequest, error) {
 	if comp == nil {
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "caldav: unexpected empty calendar-data in request")
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "caldav: unexpected empty calendar-data in request")
 	}
 	if comp.Allprop != nil && len(comp.Prop) > 0 {
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "caldav: only one of allprop or prop can be specified in calendar-data")
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "caldav: only one of allprop or prop can be specified in calendar-data")
 	}
 	if comp.Allcomp != nil && len(comp.Comp) > 0 {
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "caldav: only one of allcomp or comp can be specified in calendar-data")
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "caldav: only one of allcomp or comp can be specified in calendar-data")
 	}
 
 	req := &CalendarCompRequest{
@@ -245,7 +246,7 @@ func (h *Handler) handleMultiget(ctx context.Context, w http.ResponseWriter, mul
 	var dataReq CalendarCompRequest
 	if multiget.Prop != nil {
 		var calendarData calendarDataReq
-		if err := multiget.Prop.Decode(&calendarData); err != nil && !internal.IsNotFound(err) {
+		if err := multiget.Prop.Decode(&calendarData); err != nil && !errors.IsNotFound(err) {
 			return err
 		}
 		decoded, err := decodeCalendarDataReq(&calendarData)
@@ -320,7 +321,7 @@ func (b *backend) Options(r *http.Request) (caps []string, allow []string, err e
 
 	var dataReq CalendarCompRequest
 	_, err = b.Backend.GetCalendarObject(r.Context(), r.URL.Path, &dataReq)
-	if httpErr, ok := err.(*internal.HTTPError); ok && httpErr.Code == http.StatusNotFound {
+	if httpErr, ok := err.(*errors.HTTPError); ok && httpErr.Code == http.StatusNotFound {
 		return caps, []string{http.MethodOptions, http.MethodPut}, nil
 	} else if err != nil {
 		return nil, nil, err
@@ -675,18 +676,18 @@ func (b *backend) Put(r *http.Request) (*internal.Href, error) {
 
 	t, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil {
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "caldav: malformed Content-Type: %v", err)
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "caldav: malformed Content-Type: %v", err)
 	}
 	if t != ical.MIMEType {
 		// TODO: send CALDAV:supported-calendar-data error
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "caldav: unsupported Content-Type %q", t)
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "caldav: unsupported Content-Type %q", t)
 	}
 
 	// TODO: check CALDAV:max-resource-size precondition
 	cal, err := ical.NewDecoder(r.Body).Decode()
 	if err != nil {
 		// TODO: send CALDAV:valid-calendar-data error
-		return nil, internal.HTTPErrorf(http.StatusBadRequest, "caldav: failed to parse iCalendar: %v", err)
+		return nil, errors.HTTPErrorf(http.StatusBadRequest, "caldav: failed to parse iCalendar: %v", err)
 	}
 
 	loc, err := b.Backend.PutCalendarObject(r.Context(), r.URL.Path, cal, &opts)
@@ -733,7 +734,7 @@ const (
 func NewPreconditionError(err PreconditionType) error {
 	name := xml.Name{"urn:ietf:params:xml:ns:caldav", string(err)}
 	elem := internal.NewRawXMLElement(name, nil, nil)
-	return &internal.HTTPError{
+	return &errors.HTTPError{
 		Code: 409,
 		Err: &internal.Error{
 			Raw: []internal.RawXMLValue{*elem},

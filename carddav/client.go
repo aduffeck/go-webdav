@@ -13,6 +13,7 @@ import (
 
 	"github.com/emersion/go-vcard"
 	"github.com/emersion/go-webdav"
+	"github.com/emersion/go-webdav/errors"
 	"github.com/emersion/go-webdav/internal"
 )
 
@@ -133,17 +134,17 @@ func (c *Client) FindAddressBooks(addressBookHomeSet string) ([]AddressBook, err
 		}
 
 		var desc addressbookDescription
-		if err := resp.DecodeProp(&desc); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&desc); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var dispName internal.DisplayName
-		if err := resp.DecodeProp(&dispName); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&dispName); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var maxResSize maxResourceSize
-		if err := resp.DecodeProp(&maxResSize); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&maxResSize); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 		if maxResSize.Size < 0 {
@@ -151,7 +152,7 @@ func (c *Client) FindAddressBooks(addressBookHomeSet string) ([]AddressBook, err
 		}
 
 		var supported supportedAddressData
-		if err := resp.DecodeProp(&supported); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&supported); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
@@ -239,17 +240,17 @@ func decodeAddressList(ms *internal.MultiStatus) ([]AddressObject, error) {
 		}
 
 		var getLastMod internal.GetLastModified
-		if err := resp.DecodeProp(&getLastMod); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getLastMod); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var getETag internal.GetETag
-		if err := resp.DecodeProp(&getETag); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getETag); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var getContentLength internal.GetContentLength
-		if err := resp.DecodeProp(&getContentLength); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getContentLength); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
@@ -467,7 +468,7 @@ func (c *Client) SyncCollection(path string, query *SyncQuery) (*SyncResponse, e
 	for _, resp := range ms.Responses {
 		p, err := resp.Path()
 		if err != nil {
-			if err, ok := err.(*internal.HTTPError); ok && err.Code == http.StatusNotFound {
+			if err, ok := err.(*errors.HTTPError); ok && err.Code == http.StatusNotFound {
 				ret.Deleted = append(ret.Deleted, p)
 				continue
 			}
@@ -479,12 +480,12 @@ func (c *Client) SyncCollection(path string, query *SyncQuery) (*SyncResponse, e
 		}
 
 		var getLastMod internal.GetLastModified
-		if err := resp.DecodeProp(&getLastMod); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getLastMod); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
 		var getETag internal.GetETag
-		if err := resp.DecodeProp(&getETag); err != nil && !internal.IsNotFound(err) {
+		if err := resp.DecodeProp(&getETag); err != nil && !errors.IsNotFound(err) {
 			return nil, err
 		}
 
